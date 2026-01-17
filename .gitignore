@@ -39,3 +39,19 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE files
+.idea/
+.vs/
+.vscode/
+
+# Backend dependencies (if not using separate .gitignore)
+backend/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel/
