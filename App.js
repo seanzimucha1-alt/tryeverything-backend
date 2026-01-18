@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Alert } from 'react-native';
+import Constants from 'expo-constants';
 import LoginScreen from './LoginScreen';
 import FeedScreen from './FeedScreen';
 import RegisterScreen from './RegisterScreen';
@@ -20,6 +21,7 @@ import DelivererEarningsScreen from './DelivererEarningsScreen';
 import MyDeliveriesScreen from './MyDeliveriesScreen';
 import DelivererDashboardScreen from './DelivererDashboardScreen';
 import ChatScreen from './ChatScreen';
+import VideoUploadScreen from './VideoUploadScreen';
 import BottomNavBar from './BottomNavBar';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { DataProvider } from './DataContext';
@@ -32,6 +34,12 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// Helper: resolve apiUrl from runtime config (expo) or fallback
+const getApiUrl = () => {
+  const cfg = Constants.expoConfig || Constants.manifest;
+  return (cfg && cfg.extra && cfg.extra.apiUrl) || 'https://tryeverything-backend.vercel.app';
+};
 
 // Splash Screen Component
 const SplashScreen = ({ onFinish }) => {
@@ -57,11 +65,36 @@ function MainApp() {
   const [authScreen, setAuthScreen] = useState('login'); // 'login' or 'register'
   const [activeScreen, setActiveScreen] = useState('feed'); // 'feed' or 'profile'
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [apiReachable, setApiReachable] = useState(true);
 
   const handleAuthSuccess = (role = 'Customer') => {
     setUserRole(role);
     setIsAuthenticated(true);
   };
+
+  // Quick backend reachability check after splash
+  useEffect(() => {
+    if (showSplash) return;
+    let mounted = true;
+    const checkBackend = async () => {
+      const url = `${getApiUrl()}/api/auth/profile`;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(url, { method: 'GET', signal: controller.signal });
+        clearTimeout(timeout);
+        if (mounted) setApiReachable(true);
+      } catch (err) {
+        if (mounted) {
+          // Don't show alert during development - allow app to continue with mock data
+          console.warn('API reachability check failed (development mode):', err?.message || err);
+          setApiReachable(false);
+        }
+      }
+    };
+    checkBackend();
+    return () => { mounted = false; };
+  }, [showSplash]);
 
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
@@ -164,6 +197,11 @@ function MainApp() {
           return <FeedScreen />;
         }
         return <DelivererEarningsScreen onBack={() => setActiveScreen('dashboard')} />;
+      case 'uploadVideo':
+        return <VideoUploadScreen 
+          navigation={{ goBack: () => setActiveScreen('feed') }}
+          onVideoUploaded={() => setActiveScreen('feed')}
+        />;
       case 'feed':
       default:
         return <FeedScreen />;

@@ -43,10 +43,17 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
     if (validateForm()) {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // Add 15-second timeout for slow networks
+        const loginPromise = supabase.auth.signInWithPassword({
           email,
           password,
         });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Login taking too long. Check your connection and try again.')), 15000)
+        );
+
+        const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
 
         if (error) {
           setErrors({ general: error.message });
@@ -77,7 +84,7 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
           onLoginSuccess(mappedRole);
         }
       } catch (error) {
-        setErrors({ general: error.message });
+        setErrors({ general: error.message || 'An unexpected error occurred' });
       } finally {
         setIsLoading(false);
       }
@@ -136,6 +143,7 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading}
             />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
@@ -153,13 +161,18 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
                 if (errors.password) setErrors({ ...errors, password: null });
               }}
               secureTextEntry
+              editable={!isLoading}
             />
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
 
           {errors.general && <Text style={[styles.errorText, { textAlign: 'center', marginBottom: 10 }]}>{errors.general}</Text>}
 
-          <TouchableOpacity style={styles.forgotPassword} onPress={() => setForgotPasswordVisible(true)}>
+          <TouchableOpacity 
+            style={styles.forgotPassword} 
+            onPress={() => setForgotPasswordVisible(true)}
+            disabled={isLoading}
+          >
             <Text style={styles.forgotPasswordText}>Forgot password?</Text>
           </TouchableOpacity>
 
@@ -177,7 +190,7 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
 
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={onSwitchToRegister}>
+            <TouchableOpacity onPress={onSwitchToRegister} disabled={isLoading}>
               <Text style={styles.signupLink}>Create account</Text>
             </TouchableOpacity>
           </View>
@@ -203,6 +216,7 @@ const LoginScreen = ({ onLoginSuccess, onSwitchToRegister }) => {
                 onChangeText={setResetEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                editable={!isResetting}
               />
 
               <TouchableOpacity style={styles.loginButton} onPress={handleResetPassword} disabled={isResetting}>

@@ -212,6 +212,9 @@ CREATE POLICY "Admins can view all transactions" ON transactions
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Set fixed search_path for security
+  SET search_path = public;
+
   INSERT INTO public.profiles (id, name, role)
   VALUES (new.id, new.raw_user_meta_data->>'name', 'customer');
   RETURN new;
@@ -227,6 +230,9 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION public.prevent_role_change()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Set fixed search_path for security
+  SET search_path = public;
+
   -- If role is being changed, prevent the update
   IF OLD.role IS NOT NULL AND NEW.role IS NOT NULL AND OLD.role != NEW.role THEN
     RAISE EXCEPTION 'Role cannot be changed after initial assignment. Contact an administrator.';

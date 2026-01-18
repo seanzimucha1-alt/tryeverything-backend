@@ -13,12 +13,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.90.1",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "firebase-admin": "^13.6.0",
     "multer": "^2.0.2"
   }
 }

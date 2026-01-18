@@ -1,35 +1,48 @@
 {
   "expo": {
-    "name": "tryeverything",
+    "name": "TryEverything",
     "slug": "tryeverything",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "scheme": "tryeverything",
     "extra": {
-      "apiUrl": "https://YOUR-VERCEL-URL-HERE.vercel.app"
+      "apiUrl": "https://tryeverything-backend.vercel.app",
+      "eas": {
+        "projectId": "your-project-id"
+      }
     },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#556B2F"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tryeverything.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#556B2F"
       },
       "edgeToEdgeEnabled": true,
+      "package": "com.tryeverything.app",
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "TryEverything",
+      "shortName": "TryEverything",
+      "lang": "en",
+      "scope": "/",
+      "themeColor": "#556B2F",
+      "description": "Discover, Connect, Trade - Your marketplace for everything"
     }
   }
 }

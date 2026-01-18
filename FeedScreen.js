@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, Dimensions, TouchableOpacity, Image, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Video } from 'expo-video';
 import ShopScreen from './ShopScreen';
 import ProductDetailsScreen from './ProductDetailsScreen';
 import { useTheme } from './ThemeContext';
 import { useData } from './DataContext';
+import * as mockVideoService from './services/mockVideoService';
 
 const { width, height } = Dimensions.get('window');
 const BOTTOM_NAV_HEIGHT = 80;
@@ -13,43 +15,62 @@ const SCREEN_HEIGHT = height - BOTTOM_NAV_HEIGHT;
 
 const CATEGORIES = ['All', 'Sneakers', 'Fashion', 'Tech', 'Sports'];
 
-// Single Video Post Component
-const VideoPost = ({ item, onOpenShop, onViewProduct, theme }) => {
+// Single Video Post Component with actual video playback
+const VideoPost = ({ item, onOpenShop, onViewProduct, theme, onLike }) => {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  const handleLike = () => {
+    setLiked(!liked);
+    if (onLike) {
+      onLike(item.id);
+    }
+  };
+
   return (
     <View style={styles.videoContainer}>
-      {/* Video Thumbnail */}
-      <TouchableOpacity activeOpacity={0.9} style={styles.videoPlaceholder} onPress={() => onViewProduct(item.linkedProductId)}>
-        <Image source={{ uri: item.thumbnail }} style={styles.videoImage} />
-        <View style={styles.overlay}>
-          <Text style={styles.placeholderText}>Play Video</Text>
-          <Text style={styles.placeholderSubText}>{item.description}</Text>
-        </View>
-      </TouchableOpacity>
+      {/* Video Player */}
+      <View style={styles.videoPlayer}>
+        <Video
+          ref={videoRef}
+          source={{ uri: item.video_url }}
+          rate={1.0}
+          volume={1.0}
+          isMuted={false}
+          resizeMode="cover"
+          useNativeControls
+          style={styles.videoElement}
+          onError={(error) => console.log('Video error:', error)}
+        />
+      </View>
 
       {/* Right Side Actions */}
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="heart" size={32} color={theme.text} />
-          <Text style={[styles.actionText, { color: theme.text }]}>{item.likes}</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+          <Text style={styles.actionIcon}>{liked ? '❤️' : '🤍'}</Text>
+          <Text style={[styles.actionText, { color: theme.text }]}>
+            {liked ? item.likes + 1 : item.likes}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chatbubble-ellipses" size={32} color={theme.text} />
+          <Text style={styles.actionIcon}>💬</Text>
           <Text style={[styles.actionText, { color: theme.text }]}>{item.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
-          <FontAwesome name="share" size={32} color={theme.text} />
+          <Text style={styles.actionIcon}>📤</Text>
           <Text style={[styles.actionText, { color: theme.text }]}>Share</Text>
         </TouchableOpacity>
       </View>
 
       {/* Bottom Info & Shop Link */}
       <View style={styles.bottomContainer}>
-        <Text style={[styles.username, { color: theme.text }]}>{item.user}</Text>
+        <Text style={[styles.username, { color: theme.text }]}>Creator</Text>
         <Text style={[styles.description, { color: theme.textSecondary }]}>{item.description}</Text>
         
-        <TouchableOpacity style={styles.shopButton} onPress={() => onOpenShop(item.shop)}>
+        <TouchableOpacity style={styles.shopButton} onPress={() => onOpenShop('Featured Store')}>
           <Ionicons name="cart" size={20} color="white" style={{ marginRight: 8 }} />
-          <Text style={styles.shopButtonText}>View Shop: {item.shop}</Text>
+          <Text style={styles.shopButtonText}>View Shop</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -63,10 +84,38 @@ const FeedScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedShop, setSelectedShop] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [videoList, setVideoList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch videos from mock service on component mount
+  useEffect(() => {
+    const loadVideos = async () => {
+      try {
+        const mockVideos = await mockVideoService.fetchAllVideos();
+        setVideoList(mockVideos);
+      } catch (error) {
+        console.error('Failed to load videos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVideos();
+  }, []);
 
   const handleViewProduct = (productId) => {
     const product = products.find(p => p.id === productId);
     if (product) setViewingProduct(product);
+  };
+
+  const handleVideoLike = async (videoId) => {
+    try {
+      const updatedVideo = await mockVideoService.likeVideo(videoId);
+      // Update local state
+      setVideoList(videoList.map(v => v.id === videoId ? updatedVideo : v));
+    } catch (error) {
+      console.error('Failed to like video:', error);
+    }
   };
 
   const filteredProducts = products.filter(product => {
@@ -124,17 +173,16 @@ const FeedScreen = () => {
             <Text style={styles.headerText}>Pamusika</Text>
             <Ionicons name="cart" size={24} color="#556B2F" style={styles.cartIcon} />
           </View>
-          {!searchQuery && <Text style={styles.tagline}>Discover,Connect,Trade</Text>}
+          {!searchQuery && <Text style={styles.tagline}>Discover, Connect, Trade</Text>}
         </View>
         
-        {/* Search Bar - Hidden when not searching */}
-        {searchQuery.length > 0 && (
-        <View style={[styles.searchBar, { backgroundColor: theme.border }]}>
-            <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
+        {/* Search Bar */}
+        <View style={[styles.searchBar, { backgroundColor: searchQuery.length > 0 ? theme.border : 'rgba(255,255,255,0.9)' }]}>
+            <Ionicons name="search" size={20} color="#6B7280" style={{ marginRight: 8 }} />
             <TextInput
-                style={[styles.searchInput, { color: theme.text }]}
+                style={styles.searchInput}
                 placeholder="Search products..."
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor="#6B7280"
                 value={searchQuery}
                 onChangeText={(text) => {
                   setSearchQuery(text);
@@ -186,8 +234,8 @@ const FeedScreen = () => {
         />
       ) : (
         <FlatList
-            data={videos}
-            renderItem={({ item }) => <VideoPost item={item} onOpenShop={setSelectedShop} onViewProduct={handleViewProduct} theme={theme} />}
+            data={videoList}
+            renderItem={({ item }) => <VideoPost item={item} onOpenShop={setSelectedShop} onViewProduct={handleViewProduct} theme={theme} onLike={handleVideoLike} />}
             keyExtractor={item => item.id}
             pagingEnabled
             showsVerticalScrollIndicator={false}
@@ -230,14 +278,12 @@ const styles = StyleSheet.create({
   productImagePlaceholder: { height: 120, borderRadius: 8, marginBottom: 12, alignItems: 'center', justifyContent: 'center' },
   productName: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
   productPrice: { fontSize: 14 },
-  videoContainer: { width: width, height: SCREEN_HEIGHT, justifyContent: 'center', alignItems: 'center' },
-  videoPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' },
-  videoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  placeholderText: { color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' },
-  placeholderSubText: { color: '#FFFFFF', fontSize: 16, marginTop: 10 },
-  actionsContainer: { position: 'absolute', right: 10, bottom: 150, alignItems: 'center' },
+  videoContainer: { width: width, height: SCREEN_HEIGHT, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  videoPlayer: { width: '100%', height: '100%', backgroundColor: '#000' },
+  videoElement: { width: '100%', height: '100%' },
+  actionsContainer: { position: 'absolute', right: 10, bottom: 150, alignItems: 'center', zIndex: 5 },
   actionButton: { marginBottom: 20, alignItems: 'center' },
+  actionIcon: { fontSize: 32, marginBottom: 4 },
   actionText: { marginTop: 5, fontSize: 12, fontWeight: '600' },
   bottomContainer: { position: 'absolute', bottom: 40, left: 10, right: 80 },
   username: { fontWeight: 'bold', fontSize: 18, marginBottom: 5 },

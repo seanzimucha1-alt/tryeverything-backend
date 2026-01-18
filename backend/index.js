@@ -41,6 +41,18 @@ app.use('/api/uploads', uploadsRoute);
 app.use('/api/notifications', notificationsRoute);
 app.use('/api/team', teamRoute);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        supabase: process.env.SUPABASE_URL ? '✅ Configured' : '❌ Not configured',
+        backend_url: 'https://tryeverything-backend.vercel.app'
+    });
+});
+
 app.get('/', (req, res) => {
     res.send('Backend API is running');
 });

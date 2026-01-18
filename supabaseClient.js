@@ -1,9 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 
-// API Base URL: Use Vercel URL in production, local IP for development
+// API Base URL: Use Vercel URL in production
 // Set VERCEL_URL environment variable in Vercel dashboard after deployment
-// For local development with Expo Go, use your computer's IP address
 const getApiBaseUrl = () => {
   // In production (Vercel), use the Vercel URL
   if (process.env.VERCEL_URL) {
@@ -15,8 +14,8 @@ const getApiBaseUrl = () => {
     return Constants.expoConfig.extra.apiUrl;
   }
   
-  // Default to local development IP (update this with your local IP for Expo Go)
-  return 'http://192.168.254.59:3000';
+  // During development, return a placeholder - actual API calls will use mock data
+  return 'http://localhost:3000'; // Local development default
 };
 
 export const API_BASE_URL = getApiBaseUrl();

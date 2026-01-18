@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-// import AsyncStorage from '@react-native-async-storage/async-storage'; // Temporarily disabled
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const lightTheme = {
   mode: 'light',
@@ -37,8 +37,19 @@ export const ThemeProvider = ({ children }) => {
 
   // Load saved theme preference on mount
   useEffect(() => {
-    // For now, just use system theme - AsyncStorage temporarily disabled
-    setIsLoading(false);
+    const loadThemePreference = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem('themeMode');
+        if (savedTheme !== null) {
+          setIsDark(savedTheme === 'dark');
+        }
+      } catch (error) {
+        console.error('Error loading theme preference:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadThemePreference();
   }, []);
 
   const theme = isDark ? darkTheme : lightTheme;

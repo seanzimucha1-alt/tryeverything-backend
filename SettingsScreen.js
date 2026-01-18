@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Switch, ScrollView, Modal, Fl
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabaseClient';
-// import AsyncStorage from '@react-native-async-storage/async-storage'; // Temporarily disabled
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LANGUAGES = [
   { code: 'en', name: 'English' },
@@ -24,7 +24,15 @@ const SettingsScreen = ({ onBack }) => {
   useEffect(() => {
     const loadLanguagePreference = async () => {
       try {
-        // Try to get from profile
+        // First try to get from local storage
+        const savedLanguage = await AsyncStorage.getItem('userLanguage');
+        if (savedLanguage) {
+          const lang = JSON.parse(savedLanguage);
+          setSelectedLanguage(lang.name);
+          setLanguageCode(lang.code);
+        }
+
+        // Also try to get from profile (will override local storage if user is logged in)
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
@@ -38,6 +46,8 @@ const SettingsScreen = ({ onBack }) => {
             if (lang) {
               setSelectedLanguage(lang.name);
               setLanguageCode(lang.code);
+              // Update local storage to match profile
+              await AsyncStorage.setItem('userLanguage', JSON.stringify(lang));
             }
           }
         }
@@ -54,6 +64,9 @@ const SettingsScreen = ({ onBack }) => {
     setLanguageModalVisible(false);
 
     try {
+      // Save to local storage
+      await AsyncStorage.setItem('userLanguage', JSON.stringify(language));
+
       // Update profile in database
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
